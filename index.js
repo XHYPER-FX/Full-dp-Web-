@@ -1,15 +1,9 @@
 const express = require("express");
-const {
-  default: makeWASocket,
-  useMultiFileAuthState,
-  delay
-} = require("@whiskeysockets/baileys");
-const pino = require("pino");
+const cors = require("cors");
 const fs = require("fs");
 const multer = require("multer");
 const path = require("path");
 const Jimp = require("jimp");
-const cors = require("cors");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -31,26 +25,37 @@ const upload = multer({ storage });
 app.use(cors());
 app.use(express.json());
 
+// ✅ Home (keeps Render alive)
 app.get("/", (req, res) => {
-  res.send("✅ Full DP Uploader Running on Render");
+  res.send("✅ Full DP Uploader Server Running on Render");
 });
 
+// ✅ Upload image
 app.post("/upload", upload.single("image"), (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No file uploaded" });
   res.json({ filename: req.file.filename });
 });
 
+// ✅ Connect route (Baileys loads ONLY here)
 app.get("/connect", async (req, res) => {
-  const { phoneNumber, filename } = req.query;
-  if (!phoneNumber || !filename)
-    return res.status(400).json({ error: "Missing data" });
-
-  const cleanNumber = phoneNumber.replace(/[^0-9]/g, "");
-  const sessionFolder = path.join(sessionDir, `session-${cleanNumber}`);
-
-  const { state, saveCreds } = await useMultiFileAuthState(sessionFolder);
-
   try {
+    const { phoneNumber, filename } = req.query;
+    if (!phoneNumber || !filename)
+      return res.status(400).json({ error: "Missing data" });
+
+    const cleanNumber = phoneNumber.replace(/[^0-9]/g, "");
+    const sessionFolder = path.join(sessionDir, `session-${cleanNumber}`);
+
+    // 🔥 Load Baileys only when needed
+    const {
+      default: makeWASocket,
+      useMultiFileAuthState,
+      delay
+    } = require("@whiskeysockets/baileys");
+    const pino = require("pino");
+
+    const { state, saveCreds } = await useMultiFileAuthState(sessionFolder);
+
     const sock = makeWASocket({
       auth: state,
       logger: pino({ level: "silent" }),
@@ -69,7 +74,6 @@ app.get("/connect", async (req, res) => {
           const img = await Jimp.read(imgPath);
 
           const min = Math.min(img.bitmap.width, img.bitmap.height);
-
           const buffer = await img
             .crop(0, 0, min, min)
             .resize(640, 640)
@@ -100,14 +104,15 @@ app.get("/connect", async (req, res) => {
       const format = code?.match(/.{1,4}/g)?.join("-") || code;
       return res.json({ code: format });
     } else {
-      return res.json({ error: "Session already exists, wait..." });
+      return res.json({ error: "Session exists, wait..." });
     }
   } catch (err) {
-    console.error("Server Error:", err);
+    console.error("CONNECT ERROR:", err);
     if (!res.headersSent) res.status(500).json({ error: "Server error" });
   }
 });
 
+// ✅ KEEP SERVICE ALIVE (MOST IMPORTANT)
 app.listen(PORT, "0.0.0.0", () => {
   console.log("🚀 Server running on port", PORT);
 });
