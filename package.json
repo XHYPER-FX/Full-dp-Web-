@@ -1,7 +1,7 @@
 {
-  "name": "full-dp-web",
+  "name": "full-dp-uploader",
   "version": "1.0.0",
-  "description": "WhatsApp Full DP Web App",
+  "description": "WhatsApp Full DP Uploader Web + Bot",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
@@ -10,8 +10,11 @@
     "node": ">=18"
   },
   "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.8",
+    "cors": "^2.8.5",
     "express": "^4.19.2",
-    "axios": "^1.6.8",
-    "cors": "^2.8.5"
+    "jimp": "^0.22.10",
+    "multer": "^1.4.5-lts.1",
+    "pino": "^8.19.0"
   }
 }
